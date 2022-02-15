@@ -5,7 +5,8 @@ from OpenGL.GLU import *
 if not glfw.init():
 	raise Exception("glfw init hiba")
 	
-window = glfw.create_window(1280, 720, "OpenGL window", None, None)
+window = glfw.create_window(1280, 720, "OpenGL window", 
+	None, None)
 
 if not window:
 	glfw.terminate()
@@ -23,19 +24,30 @@ glLoadIdentity()
 gluOrtho2D(1280/-2, 1280/2, 720/-2, 720/2)
 glMatrixMode(GL_MODELVIEW)
 
+glLoadIdentity()
+matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+print(matrix)
+glTranslatef(550, 50, 0)
+matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+print(matrix)
+#glScalef(0.5, 0.5, 0.5)
+matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+print(matrix)
+glRotatef(45, 0, 0, 1)
+matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+print(matrix)
+
+
 while not glfw.window_should_close(window):
 	glfw.poll_events()
-
-	keyState = glfw.get_key(window, glfw.KEY_LEFT)
-	if keyState == glfw.PRESS:
-		angle += 1
-
 
 	glClearColor(0, 1, 0, 1)
 	glClear(GL_COLOR_BUFFER_BIT)
 	glLoadIdentity()
-	#glScalef(10, 10, 10)
+	glTranslatef(550, 50, 0)
+	glScalef(1.5, 1.5, 1.5)
 	glRotatef(angle, 0, 0, 1)
+	
 	glBegin(GL_QUADS)
 	glColor3f(1.0, 0, 0)
 	glVertex2f(-20, 20)
@@ -44,8 +56,9 @@ while not glfw.window_should_close(window):
 	glVertex2f(-20, -20)
 	glEnd()
 
-	#angle += 1
+	angle += 1
 
 	glfw.swap_buffers(window)
 	
 glfw.terminate()
+

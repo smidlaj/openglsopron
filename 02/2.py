@@ -30,7 +30,7 @@ print(matrix)
 glTranslatef(550, 50, 0)
 matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
 print(matrix)
-#glScalef(0.5, 0.5, 0.5)
+glScalef(0.5, 0.5, 0.5)
 matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
 print(matrix)
 glRotatef(45, 0, 0, 1)
@@ -44,7 +44,9 @@ while not glfw.window_should_close(window):
 	glClearColor(0, 1, 0, 1)
 	glClear(GL_COLOR_BUFFER_BIT)
 	glLoadIdentity()
-	glTranslatef(550, 50, 0)
+	
+	
+	glTranslatef(150, 50, 0)
 	glScalef(1.5, 1.5, 1.5)
 	glRotatef(angle, 0, 0, 1)
 	
@@ -61,4 +63,3 @@ while not glfw.window_should_close(window):
 	glfw.swap_buffers(window)
 	
 glfw.terminate()
-

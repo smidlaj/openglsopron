@@ -54,7 +54,7 @@ class Wall:
 		
 		glLineWidth(5)
 		glBegin(GL_QUADS)
-		glColor3f(self.red, self.green, self.blue, 1)
+		glColor3f(self.red, self.green, self.blue)
 		glNormal3f(self.normal.x, self.normal.y, self.normal.z)
 		for i in range(100):
 			x1 = self.x1 + ((self.x2 - self.x1) / 100) * i

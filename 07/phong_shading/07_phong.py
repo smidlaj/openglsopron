@@ -34,12 +34,35 @@ exitProgram = False
 selectObject = 1
 if selectObject == 0:
 	# most csak koordinatakat tarolunk:
-	vertices = [0, 10, 0, 10, 10, 0, 10, 10, -10, 0, 10, -10,
-			0, 0, 0, 10, 0, 0, 10, 0, -10, 0, 0, -10,
-			10, 0, 0, 10, 0, -10, 10, 10, -10, 10, 10, 0,
-			0, 0, 0, 0, 0, -10, 0, 10, -10, 0, 10, 0,
-			0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 10, 0,
-			0, 0, -10, 10, 0, -10, 10, 10, -10, 0, 10, -10]
+	vertices = [  0,  10,   0,  0, 1, 0,
+	             10,  10,   0,  0, 1, 0,
+				 10,  10, -10,  0, 1, 0,
+				  0,  10, -10,  0, 1, 0,
+
+			      0, 0,   0,  0, -1, 0,
+				 10, 0,   0,  0, -1, 0,
+				 10, 0, -10,  0, -1, 0,
+				  0, 0, -10,  0, -1, 0,
+
+			     10,  0,   0,  1, 0, 0,
+				 10,  0, -10,  1, 0, 0,
+				 10, 10, -10,  1, 0, 0,
+				 10, 10,   0,  1, 0, 0,
+
+				  0,  0,   0, -1, 0, 0,
+				  0,  0, -10, -1, 0, 0,
+				  0, 10, -10, -1, 0, 0,
+				  0, 10,   0, -1, 0, 0,
+
+				  0,  0,   0, 0, 0, 1, 
+				  10, 0,   0, 0, 0, 1,
+				  10, 10,  0, 0, 0, 1,
+				  0,  10,  0, 0, 0, 1,
+
+				  0,  0,  -10,  0, 0, -1,
+				  10, 0,  -10,  0, 0, -1,
+				  10, 10, -10,  0, 0, -1,
+				  0, 10, -10,   0, 0, -1]
 	vertCount = 6*4
 	shapeType = GL_QUADS
 	zTranslate = -50
@@ -63,9 +86,13 @@ def createCube(shader):
 	# A kovetkezo 3 sor ezert megmondja, hogy majd 3-asaval kell kiszednia bufferbpl
 	# a szamokat, és azokat a vertex shaderben levo 'position' 3-as vektorba kell mindig 
 	# betolteni.
-	position = glGetAttribLocation(shader, 'position')
-	glEnableVertexAttribArray(position)
-	glVertexAttribPointer(position, 3, GL_FLOAT, False, 0, ctypes.c_void_p(0))
+	position_loc = glGetAttribLocation(shader, 'in_position')
+	glEnableVertexAttribArray(position_loc)
+	glVertexAttribPointer(position_loc, 3, GL_FLOAT, False, vertices.itemsize * 6, ctypes.c_void_p(0))
+
+	normal_loc = glGetAttribLocation(shader, 'in_normal')
+	glEnableVertexAttribArray(normal_loc)
+	glVertexAttribPointer(normal_loc, 3, GL_FLOAT, False, vertices.itemsize * 6, ctypes.c_void_p(12))
 
 	# Feltoltjuk a buffert a szamokkal.
 	glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
@@ -81,11 +108,11 @@ def renderModel(vao, vertCount, shapeType):
 	# Kirajzoljuk a buffert, a 0. vertextol kezdve, 24-et ( a kockanak 6 oldala van, minden oldalhoz 4 csucs).
 	glDrawArrays(shapeType, 0, vertCount)
 
-with open("vertex_shader_1.vert") as f:
+with open("vertex_shader_phong.vert") as f:
 	vertex_shader = f.read()
 	print(vertex_shader)
 
-with open("fragment_shader_1.frag") as f:
+with open("fragment_shader_phong.frag") as f:
 	fragment_shader = f.read()
 	print(fragment_shader)
 
@@ -98,6 +125,10 @@ shader = OpenGL.GL.shaders.compileProgram(
 # Kijeloljuk, hogy melyik shader programot szeretnenk hasznalni. Tobb is lehet a programunkban,
 # ha esetleg a programunk kulonbozo tipusu anyagokat szeretne megjeleniteni.
 glUseProgram(shader)
+
+
+lightPos_loc = glGetUniformLocation(shader, 'lightPos');
+glUniform3f(lightPos_loc, -200.0, 200.0, 100.0)
 
 # Lekerdezzuk a shaderben levo 'projection' es 'modelView' matrixok helyet, hogy majd 
 # innen kivulrol fel tudjuk tolteni oket adatokkal.
@@ -120,7 +151,7 @@ while not glfw.window_should_close(window) and not exitProgram:
 		exitProgram = True
 
 	glClearDepth(1.0)
-	glClearColor(0, 0, 0, 1)
+	glClearColor(0, 0.1, 0.1, 1)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
 
 	# Innentol kezdve ezekre se lesz szukseg, megoldjuk mashogy:

@@ -8,6 +8,49 @@ import numpy
 import pyrr
 from UtahTeapot import *
 
+def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
+	# eszaki sark:
+	if vertIndex == 0:
+		return [0.0, radius, 0.0, 0.0, 1.0, 0.0]
+	# deli sark:
+	if vertIndex == vertSlices - 1:
+		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0]
+	alpha = math.radians(180 * (vertIndex / vertSlices))
+	beta = math.radians(360 * (horizIndex / horizSlices))
+	x = radius * math.sin(alpha) * math.cos(beta)
+	y = radius * math.cos(alpha)
+	z = radius * math.sin(alpha) * math.sin(beta)
+	l = math.sqrt(x**2 + y**2 + z**2)
+	nx = x / l
+	ny = y / l
+	nz = z / l
+	return [x, y, z, nx, ny, nz]
+
+def createSphere(radius, vertSlices, horizSlices):
+	vertList = []
+	for i in range(vertSlices):
+		for j in range(horizSlices):
+			vert1 = getSpherePoint(radius, i, j, vertSlices, horizSlices)
+			vert2 = getSpherePoint(radius, i + 1, j, vertSlices, horizSlices)
+			vert3 = getSpherePoint(radius, i + 1, j + 1, vertSlices, horizSlices)
+			vert4 = getSpherePoint(radius, i, j + 1, vertSlices, horizSlices)
+			nx = (vert1[0] + vert2[0] + vert3[0] + vert4[0]) / 4.0
+			ny = (vert1[1] + vert2[1] + vert3[1] + vert4[1]) / 4.0
+			nz = (vert1[2] + vert2[2] + vert3[2] + vert4[2]) / 4.0
+	
+			l = math.sqrt(nx**2 + ny**2 + nz**2)
+			nx = nx / l
+			ny = ny / l
+			nz = nz / l
+			vert1[3] = vert2[3] = vert3[3] = vert4[3] = nx
+			vert1[4] = vert2[4] = vert3[4] = vert4[4] = ny
+			vert1[5] = vert2[5] = vert3[5] = vert4[5] = nz
+			vertList.extend(vert1)
+			vertList.extend(vert2)
+			vertList.extend(vert3)
+			vertList.extend(vert4)
+	return vertList
+
 # Atallitjuk az eleresi utat az aktualis fajlhoz
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -71,7 +114,13 @@ if selectObject == 1:
 	vertices = utahTeapotVertices
 	vertCount = utahTeapotVertCount
 	shapeType = GL_TRIANGLES
-	zTranslate = -10
+	zTranslate = -5
+
+if selectObject == 2:
+	vertices = createSphere(10, 10, 10)
+	vertCount = int(len(vertices) / 6)
+	shapeType = GL_QUADS
+	zTranslate = -50	
 
 # elokeszitjuk az OpenGL-nek a memoriat:
 vertices = numpy.array(vertices, dtype=numpy.float32)

@@ -65,7 +65,7 @@ exitProgram = False
 
 selectObject = 1
 if selectObject == 0:
-	# most csak koordinatakat tarolunk:
+	# itt mar vannak koordinatak es normal vektorok is:
 	vertices = [  0,  10,   0,  0, 1, 0,
 	             10,  10,   0,  0, 1, 0,
 				 10,  10, -10,  0, 1, 0,

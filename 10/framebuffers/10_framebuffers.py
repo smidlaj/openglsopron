@@ -1,0 +1,368 @@
+import os
+import glfw
+from OpenGL.GL import *
+from OpenGL.GLU import *
+import OpenGL.GL.shaders
+import math
+import numpy
+import pyrr
+from UtahTeapot import *
+
+from Texture import Texture
+
+def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
+	# eszaki sark:
+	if vertIndex == 0:
+		return [0.0, radius, 0.0, 0.0, 1.0, 0.0]
+	# deli sark:
+	if vertIndex == vertSlices - 1:
+		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0]
+	alpha = math.radians(180 * (vertIndex / vertSlices))
+	beta = math.radians(360 * (horizIndex / horizSlices))
+	x = radius * math.sin(alpha) * math.cos(beta)
+	y = radius * math.cos(alpha)
+	z = radius * math.sin(alpha) * math.sin(beta)
+	l = math.sqrt(x**2 + y**2 + z**2)
+	nx = x / l
+	ny = y / l
+	nz = z / l
+	return [x, y, z, nx, ny, nz]
+
+def createSphere(radius, vertSlices, horizSlices):
+	vertList = []
+	for i in range(vertSlices):
+		for j in range(horizSlices):
+			vert1 = getSpherePoint(radius, i, j, vertSlices, horizSlices)
+			vert2 = getSpherePoint(radius, i + 1, j, vertSlices, horizSlices)
+			vert3 = getSpherePoint(radius, i + 1, j + 1, vertSlices, horizSlices)
+			vert4 = getSpherePoint(radius, i, j + 1, vertSlices, horizSlices)
+			vertList.extend(vert1)
+			vertList.extend(vert2)
+			vertList.extend(vert3)
+			vertList.extend(vert4)
+	return vertList
+
+# Atallitjuk az eleresi utat az aktualis fajlhoz
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+if not glfw.init():
+	raise Exception("glfw init hiba")
+	
+window = glfw.create_window(1280, 720, "OpenGL window", 
+	None, None)
+
+if not window:
+	glfw.terminate()
+	raise Exception("glfw window init hiba")
+
+glfw.make_context_current(window)
+glEnable(GL_DEPTH_TEST)
+glViewport(0, 0, 1280, 720)
+# ezekre innentol nincs szukseg, mi magunk allitjuk elo a projekcios matrixot:
+#glMatrixMode(GL_PROJECTION)
+#glLoadIdentity()
+#gluPerspective(45, 1280.0 / 720.0, 0.1, 1000.0)
+
+
+############################################################
+# Framebuffer elokeszitese
+frameBuffer = glGenFramebuffers(1)
+glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer)
+
+texture = glGenTextures(1)
+glBindTexture(GL_TEXTURE_2D, texture)
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1280, 720, 0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(0))
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR )
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+glBindTexture(GL_TEXTURE_2D, 0)
+
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0)
+
+rbo = glGenRenderbuffers(1)
+glBindRenderbuffer(GL_RENDERBUFFER, rbo)
+glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1280, 720) 
+glBindRenderbuffer(GL_RENDERBUFFER, 0)
+
+glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo)
+
+if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+	print("Hiba a framebuffer elokeszitesekor!")
+else:
+	print("Framebuffer elokeszitve!")
+
+glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
+# kell majd egy shader, hogy a kesz kepet rendereljuk egy teglalapba:
+with open("screen_shader.vert") as f:
+	vertex_shader = f.read()
+	print(vertex_shader)
+
+with open("screen_shader.frag") as f:
+	fragment_shader = f.read()
+	print(fragment_shader)
+
+# A fajlbol beolvasott stringeket leforditjuk, es a ket shaderbol egy shader programot gyartunk.
+screen_shader = OpenGL.GL.shaders.compileProgram(
+	OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
+    OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+)
+
+glUseProgram(0)
+
+# kell egy buffer a teglalapnak is:
+
+vertices = [
+		-1,  1, 0, 0,
+		 1,  1, 1, 0,
+		 1, -1, 1, 1,
+		-1, -1, 0, 1
+		 ]
+vertices = numpy.array(vertices, dtype=numpy.float32)
+rectangle = glGenBuffers(1)
+glBindBuffer(GL_ARRAY_BUFFER, rectangle)
+    
+position_loc = glGetAttribLocation(screen_shader, 'in_position')
+glEnableVertexAttribArray(position_loc)
+glVertexAttribPointer(position_loc, 2, GL_FLOAT, False, vertices.itemsize * 4, ctypes.c_void_p(0))
+
+texture_loc = glGetAttribLocation(screen_shader, 'in_texCoord')
+glEnableVertexAttribArray(texture_loc)
+glVertexAttribPointer(texture_loc, 2, GL_FLOAT, False, vertices.itemsize * 4, ctypes.c_void_p(8))
+
+glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+    
+glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+############################################################
+
+
+
+exitProgram = False
+
+selectObject = 1
+if selectObject == 0:
+	# itt mar vannak koordinatak es normal vektorok is:
+	vertices = [  0,  10,   0,  0, 1, 0,
+	             10,  10,   0,  0, 1, 0,
+				 10,  10, -10,  0, 1, 0,
+				  0,  10, -10,  0, 1, 0,
+
+			      0, 0,   0,  0, -1, 0,
+				 10, 0,   0,  0, -1, 0,
+				 10, 0, -10,  0, -1, 0,
+				  0, 0, -10,  0, -1, 0,
+
+			     10,  0,   0,  1, 0, 0,
+				 10,  0, -10,  1, 0, 0,
+				 10, 10, -10,  1, 0, 0,
+				 10, 10,   0,  1, 0, 0,
+
+				  0,  0,   0, -1, 0, 0,
+				  0,  0, -10, -1, 0, 0,
+				  0, 10, -10, -1, 0, 0,
+				  0, 10,   0, -1, 0, 0,
+
+				  0,  0,   0, 0, 0, 1, 
+				  10, 0,   0, 0, 0, 1,
+				  10, 10,  0, 0, 0, 1,
+				  0,  10,  0, 0, 0, 1,
+
+				  0,  0,  -10,  0, 0, -1,
+				  10, 0,  -10,  0, 0, -1,
+				  10, 10, -10,  0, 0, -1,
+				  0, 10, -10,   0, 0, -1]
+	vertCount = 6*4
+	shapeType = GL_QUADS
+	zTranslate = -50
+
+if selectObject == 1:
+	vertices = utahTeapotVertices
+	vertCount = utahTeapotVertCount
+	shapeType = GL_TRIANGLES
+	zTranslate = -5
+
+if selectObject == 2:
+	vertices = createSphere(10, 50, 50)
+	vertCount = int(len(vertices) / 6)
+	shapeType = GL_QUADS
+	zTranslate = -50
+
+# elokeszitjuk az OpenGL-nek a memoriat:
+vertices = numpy.array(vertices, dtype=numpy.float32)
+
+def createCube(shader):
+	# keszitunk egy uj buffert, ez itt meg akarmi is lehet
+	vao = glGenBuffers(1)
+	# megadjuk, hogy ez egy ARRAY_BUFFER legyen (kesobb lesz mas fajta is)
+	glBindBuffer(GL_ARRAY_BUFFER, vao)
+    
+	# Az OpenGL nem tudja, hogy a bufferben levo szamokat hogy kell ertelmezni
+	# A kovetkezo 3 sor ezert megmondja, hogy majd 3-asaval kell kiszednia bufferbpl
+	# a szamokat, és azokat a vertex shaderben levo 'position' 3-as vektorba kell mindig 
+	# betolteni.
+	position_loc = glGetAttribLocation(shader, 'in_position')
+	glEnableVertexAttribArray(position_loc)
+	glVertexAttribPointer(position_loc, 3, GL_FLOAT, False, vertices.itemsize * 6, ctypes.c_void_p(0))
+
+	normal_loc = glGetAttribLocation(shader, 'in_normal')
+	glEnableVertexAttribArray(normal_loc)
+	glVertexAttribPointer(normal_loc, 3, GL_FLOAT, False, vertices.itemsize * 6, ctypes.c_void_p(12))
+
+	# Feltoltjuk a buffert a szamokkal.
+	glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+    
+	# Ideiglenesen inaktivaljuk a buffert, hatha masik objektumot is akarunk csinalni.
+	glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+	return vao
+
+def renderModel(vao, vertCount, shapeType):
+	# Mindig 1 GL_ARRAY_BUFFER lehet aktiv, most megmondjuk, hogy melyik legyen az
+	glBindBuffer(GL_ARRAY_BUFFER, vao)
+	
+	position_loc = glGetAttribLocation(shader, 'in_position')
+	glEnableVertexAttribArray(position_loc)
+	glVertexAttribPointer(position_loc, 3, GL_FLOAT, False, 4 * 6, ctypes.c_void_p(0))
+	normal_loc = glGetAttribLocation(shader, 'in_normal')
+	glEnableVertexAttribArray(normal_loc)
+	glVertexAttribPointer(normal_loc, 3, GL_FLOAT, False, 4 * 6, ctypes.c_void_p(12))
+	
+	# Kirajzoljuk a buffert, a 0. vertextol kezdve, 24-et ( a kockanak 6 oldala van, minden oldalhoz 4 csucs).
+	glDrawArrays(shapeType, 0, vertCount)
+
+with open("vertex_shader_phong_specular.vert") as f:
+	vertex_shader = f.read()
+	print(vertex_shader)
+
+with open("fragment_shader_phong_specular.frag") as f:
+	fragment_shader = f.read()
+	print(fragment_shader)
+
+# A fajlbol beolvasott stringeket leforditjuk, es a ket shaderbol egy shader programot gyartunk.
+shader = OpenGL.GL.shaders.compileProgram(
+	OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
+    OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+)
+
+# Kijeloljuk, hogy melyik shader programot szeretnenk hasznalni. Tobb is lehet a programunkban,
+# ha esetleg a programunk kulonbozo tipusu anyagokat szeretne megjeleniteni.
+glUseProgram(shader)
+
+
+lightPos_loc = glGetUniformLocation(shader, 'lightPos');
+viewPos_loc = glGetUniformLocation(shader, 'viewPos');
+
+glUniform3f(lightPos_loc, -200.0, 200.0, 100.0)
+glUniform3f(viewPos_loc, 0.0, 0.0, 0.0)
+
+# Lekerdezzuk a shaderben levo 'projection' es 'modelView' matrixok helyet, hogy majd 
+# innen kivulrol fel tudjuk tolteni oket adatokkal.
+perspectiveLocation = glGetUniformLocation(shader, "projection")
+modelViewLocation = glGetUniformLocation(shader, "modelView")
+
+# Eloallitunk egy projekcios matrixot, a parameterezes ugyanaz, mint a gluPerspective-nek
+perspMat = pyrr.matrix44.create_perspective_projection_matrix(45.0, 1280.0 / 720.0, 0.1, 1000.0)
+# Atadjuk az eloallitott matrixot a shader-ben levo 'projection' matrixnak
+glUniformMatrix4fv(perspectiveLocation, 1, GL_FALSE, perspMat)
+
+cube = createCube(shader)
+
+angle = 0.0
+
+
+while not glfw.window_should_close(window) and not exitProgram:
+	glfw.poll_events()
+
+	if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+		exitProgram = True
+
+	#######################################
+	# Lerendereljuk a kepet egy framebufferbe
+	#######################################
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer)
+	glViewport(0, 0, 1280, 720)
+
+	glUseProgram(shader)
+
+	glUniform3f(lightPos_loc, -200.0, 200.0, 100.0)
+	glUniform3f(viewPos_loc, 0.0, 0.0, 0.0)
+	glUniformMatrix4fv(perspectiveLocation, 1, GL_FALSE, perspMat)
+
+	glClearDepth(1.0)
+	glClearColor(0, 0.1, 0.1, 1)
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
+	glEnable(GL_DEPTH_TEST)
+
+	# Innentol kezdve ezekre se lesz szukseg, megoldjuk mashogy:
+	#glMatrixMode(GL_MODELVIEW)
+	#glLoadIdentity()
+	transMat = pyrr.matrix44.create_from_translation(pyrr.Vector3([0, 0, zTranslate]))
+	rotMatY = pyrr.matrix44.create_from_y_rotation(math.radians(angle))
+	rotMatX = pyrr.matrix44.create_from_x_rotation(math.radians(angle))
+	rotMat = pyrr.matrix44.multiply(rotMatY, rotMatX)
+	
+	# vagy akar a glRotatef-et is helyettesithetjuk
+	# FONTOS!! A Vector3 konstruktoraban lathato szamok lebegopontosak legyenek, azaz 
+	# mindenkeppen szerepeljen bennuk egy . is, vagy .0 vegzodes (meg ha egeszeket is adunk meg),
+	# kulonben hibas lesz a matrix.
+	rotMat = pyrr.matrix44.create_from_axis_rotation(pyrr.Vector3([1., 1., 1.0]), math.radians(glfw.get_time() * 50))
+	
+	# Ez hibas... just Python things :(
+	#rotMat = pyrr.matrix44.create_from_axis_rotation(pyrr.Vector3([1, 1, 1]), math.radians(angle))
+
+	# Ezekre se lesz szukseg, megoldjuk mashogy:
+	#glTranslatef(0, 0, -50)
+	#glScalef(0.1, 0.1, 0.1)
+	#glRotatef(angle, 1, 1, 1)
+	angle += 1
+
+	modelMat = pyrr.matrix44.multiply(rotMat, transMat)
+	glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, modelMat )
+	#renderModel(cube, vertCount, shapeType)
+	
+	# Mindig 1 GL_ARRAY_BUFFER lehet aktiv, most megmondjuk, hogy melyik legyen az
+	glBindBuffer(GL_ARRAY_BUFFER, cube)
+	
+	position_loc = glGetAttribLocation(shader, 'in_position')
+	glEnableVertexAttribArray(position_loc)
+	glVertexAttribPointer(position_loc, 3, GL_FLOAT, False, 4 * 6, ctypes.c_void_p(0))
+	normal_loc = glGetAttribLocation(shader, 'in_normal')
+	glEnableVertexAttribArray(normal_loc)
+	glVertexAttribPointer(normal_loc, 3, GL_FLOAT, False, 4 * 6, ctypes.c_void_p(12))
+	
+	# Kirajzoljuk a buffert, a 0. vertextol kezdve, 24-et ( a kockanak 6 oldala van, minden oldalhoz 4 csucs).
+	glDrawArrays(shapeType, 0, vertCount)
+	glBindBuffer(GL_ARRAY_BUFFER, 0)
+	
+	glUseProgram(0)
+
+	######################################
+	# Masodik menet, kiolvassuk a kepet, es megjelenitjuk kulon
+	######################################
+	glBindFramebuffer(GL_FRAMEBUFFER, 0)
+	glClearDepth(1.0)
+	glClearColor(0, 0.1, 0.1, 1)
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
+	glDisable(GL_DEPTH_TEST)
+
+	glUseProgram(screen_shader)
+
+	glBindBuffer(GL_ARRAY_BUFFER, rectangle)
+
+	position_loc = glGetAttribLocation(screen_shader, 'in_position')
+	glEnableVertexAttribArray(position_loc)
+	glVertexAttribPointer(position_loc, 2, GL_FLOAT, False, 4 * 4, ctypes.c_void_p(0))
+	texture_loc = glGetAttribLocation(screen_shader, 'in_texCoord')
+	glEnableVertexAttribArray(texture_loc)
+	glVertexAttribPointer(texture_loc, 2, GL_FLOAT, False, 4 * 4, ctypes.c_void_p(8))
+
+	glBindTexture(GL_TEXTURE_2D, texture)
+	
+	glDrawArrays(GL_QUADS, 0, 4)
+	glBindBuffer(GL_ARRAY_BUFFER, 0)
+	glUseProgram(0)
+	glfw.swap_buffers(window)
+
+
+glfw.terminate()

@@ -28,7 +28,7 @@ class Camera:
 			@param dist: Azt adja meg, hogy az iranyvektor hanyszorosaval mozduljunk el.
 		"""
 		self.x += self.dirX * dist
-		self.y += self.dirY * dist
+		#self.y += self.dirY * dist
 		self.z += self.dirZ * dist
 
 	def __update(self):

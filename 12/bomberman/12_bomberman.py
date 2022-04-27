@@ -11,6 +11,8 @@ from PIL import Image
 from SkyBox import SkyBox
 from Texture import Texture
 from Camera import Camera
+from Ground import Ground
+from Map import Map
 
 def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
 	# eszaki sark:
@@ -90,7 +92,7 @@ glViewport(0, 0, 1280, 720)
 #glLoadIdentity()
 #gluPerspective(45, 1280.0 / 720.0, 0.1, 1000.0)
 
-camera = Camera(0, 0, 50)
+camera = Camera(100, 0, 100)
 
 with open("vertex_shader_texture.vert") as f:
 	vertex_shader = f.read()
@@ -229,11 +231,13 @@ perspMat = pyrr.matrix44.create_perspective_projection_matrix(45.0, 1280.0 / 720
 # ha esetleg a programunk kulonbozo tipusu anyagokat szeretne megjeleniteni.
 glUseProgram(shader)
 
-
+lightX = -200.0
+lightY = 200.0
+lightZ = 100.0
 lightPos_loc = glGetUniformLocation(shader, 'lightPos');
 viewPos_loc = glGetUniformLocation(shader, 'viewPos');
 
-glUniform3f(lightPos_loc, -200.0, 200.0, 100.0)
+glUniform3f(lightPos_loc, lightX, lightY, lightZ)
 glUniform3f(viewPos_loc, camera.x, camera.y, camera.z )
 
 materialAmbientColor_loc = glGetUniformLocation(shader, "materialAmbientColor")
@@ -460,7 +464,9 @@ perspMat = pyrr.matrix44.create_perspective_projection_matrix(45.0, 1280.0 / 720
 glUniformMatrix4fv(perspectiveLocation, 1, GL_FALSE, perspMat)
 
 cube = createObject(shader)
-
+ground = Ground(0, -10, 0, 500, 500)
+world = Map(3, 4, 3)
+world.setLightPos(lightX, lightY, lightZ)
 
 viewMat = pyrr.matrix44.create_look_at([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0])
 angle = 0.0
@@ -488,6 +494,9 @@ while not glfw.window_should_close(window) and not exitProgram:
 	#rotMat = pyrr.matrix44.multiply(rotMatY, rotMatX)
 	#modelMat = pyrr.matrix44.multiply(rotMat, transMat)
 	skyBox.render(perspMat, camera.getMatrixForCubemap() )
+
+	ground.render(camera.getMatrix(), perspMat)
+	world.render(camera, perspMat)
 
 	glUseProgram(shader)
 	# Innentol kezdve ezekre se lesz szukseg, megoldjuk mashogy:

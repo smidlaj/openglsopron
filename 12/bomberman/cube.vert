@@ -17,11 +17,8 @@ out vec3 v_normal;
 out vec2 v_texture;
 
 void main() { 
-//   gl_Position = projection * view * world * vec4((in_position), 1.0);
-//   v_position = (view * world * vec4(in_position, 1.0)).xyz;
-
    // kepernyo koordinatarendszer:
-   gl_Position = projection * viewWorld * vec4((in_position), 1.0);
+   gl_Position = projection * view * world * vec4((in_position), 1.0);
    // vilag koordinatarendszer:
    v_position = (world * vec4(in_position, 1.0)).xyz;
 

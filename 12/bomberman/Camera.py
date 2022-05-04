@@ -31,6 +31,14 @@ class Camera:
 		#self.y += self.dirY * dist
 		self.z += self.dirZ * dist
 
+		cellX = int(self.x / 20)
+		cellZ = int(self.z / 20)
+		print(cellX)
+		print(cellZ)
+
+	def getCellPosition(self, cellSize):
+		return int(self.x / cellSize), int(self.z / cellSize)
+
 	def __update(self):
 		self.dirX = math.cos(math.radians(self.angleVert))
 		self.dirZ = math.sin(math.radians(self.angleVert))

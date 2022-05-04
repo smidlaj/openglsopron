@@ -28,36 +28,36 @@ class Map:
 			self.table[0][i] = ObjectType.WALL
 			self.table[self.height - 1][i] = ObjectType.WALL
 
+		vertices = [0.0, 1.0, 1.0,  0, 1, 0, 0, 0,
+	                 1.0, 1.0, 1.0,  0, 1, 0, 0, 1,
+				 	 1.0, 1.0,0.0,  0, 1, 0, 1, 1,
+				    0.0, 1.0,0.0,  0, 1, 0, 1, 0,
 
-		vertices = [-0.5, 0.5, 0.5,  0, 1, 0, 0, 0,
-	                 0.5, 0.5, 0.5,  0, 1, 0, 0, 1,
-				 	 0.5, 0.5,-0.5,  0, 1, 0, 1, 1,
-				    -0.5, 0.5,-0.5,  0, 1, 0, 1, 0,
+			        0.0, 0.0, 1.0,  0, -1, 0, 0, 0,
+	                 1.0, 0.0, 1.0,  0, -1, 0, 0, 1,
+				 	 1.0, 0.0,0.0,  0, -1, 0, 1, 1,
+				    0.0, 0.0,0.0,  0, -1, 0, 1, 0,
 
-			        -0.5, -0.5, 0.5,  0, -1, 0, 0, 0,
-	                 0.5, -0.5, 0.5,  0, -1, 0, 0, 1,
-				 	 0.5, -0.5,-0.5,  0, -1, 0, 1, 1,
-				    -0.5, -0.5,-0.5,  0, -1, 0, 1, 0,
+			     	1.0, 0.0, 1.0,  1, 0, 0, 0, 0,
+				 	1.0, 0.0,0.0,  1, 0, 0, 0, 1,
+				 	1.0,  1.0,0.0,  1, 0, 0, 1, 1,
+				 	1.0,  1.0, 1.0,  1, 0, 0, 1, 0,
 
-			     	0.5, -0.5, 0.5,  1, 0, 0, 0, 0,
-				 	0.5, -0.5,-0.5,  1, 0, 0, 0, 1,
-				 	0.5,  0.5,-0.5,  1, 0, 0, 1, 1,
-				 	0.5,  0.5, 0.5,  1, 0, 0, 1, 0,
+			     	0.0, 0.0, 1.0,  -1, 0, 0, 0, 0,
+				 	0.0, 0.0,0.0,  -1, 0, 0, 0, 1,
+				 	0.0,  1.0,0.0,  -1, 0, 0, 1, 1,
+				 	0.0,  1.0, 1.0,  -1, 0, 0, 1, 0,
 
-			     	-0.5, -0.5, 0.5,  -1, 0, 0, 0, 0,
-				 	-0.5, -0.5,-0.5,  -1, 0, 0, 0, 1,
-				 	-0.5,  0.5,-0.5,  -1, 0, 0, 1, 1,
-				 	-0.5,  0.5, 0.5,  -1, 0, 0, 1, 0,
+				    0.0,  0.0,  1.0, 0, 0, 1, 0, 0,
+				     1.0,  0.0,  1.0, 0, 0, 1, 0, 1,
+				     1.0,   1.0,  1.0, 0, 0, 1, 1, 1,
+				    0.0,   1.0,  1.0, 0, 0, 1, 1, 0,
 
-				    -0.5,  -0.5,  0.5, 0, 0, 1, 0, 0,
-				     0.5,  -0.5,  0.5, 0, 0, 1, 0, 1,
-				     0.5,   0.5,  0.5, 0, 0, 1, 1, 1,
-				    -0.5,   0.5,  0.5, 0, 0, 1, 1, 0,
+				    0.0,  0.0,  0.0, 0, 0, -1, 0, 0,
+				     1.0,  0.0,  0.0, 0, 0, -1, 0, 1,
+				     1.0,   1.0,  0.0, 0, 0, -1, 1, 1,
+				    0.0,   1.0,  0.0, 0, 0, -1, 1, 0]
 
-				    -0.5,  -0.5,  -0.5, 0, 0, -1, 0, 0,
-				     0.5,  -0.5,  -0.5, 0, 0, -1, 0, 1,
-				     0.5,   0.5,  -0.5, 0, 0, -1, 1, 1,
-				    -0.5,   0.5,  -0.5, 0, 0, -1, 1, 0]
 
 		vertices = numpy.array(vertices, dtype=numpy.float32)
 		self.buffer = glGenBuffers(1)
@@ -139,7 +139,7 @@ class Map:
 			for col in range(0, self.width):
 				if self.table[row][col] == ObjectType.WALL:
 					transMat = pyrr.matrix44.create_from_translation(
-						pyrr.Vector3([row*self.cellSize, 0, col*self.cellSize]))
+						pyrr.Vector3([col*self.cellSize, -10, row*self.cellSize]))
 					scaleMat = pyrr.matrix44.create_from_scale([self.cellSize, self.cellSize, self.cellSize])
 					worldMat = pyrr.matrix44.multiply(scaleMat, transMat)
 					glUniformMatrix4fv(world_loc, 1, GL_FALSE, worldMat)
@@ -147,4 +147,10 @@ class Map:
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0)
 		glUseProgram(0)
+
+
+	def getCellType(self, row, col):
+		if row <= -1 or col <= -1 or row >= self.height or col >= self.width:
+			return ObjectType.NOTHING
+		return self.table[row][col]
 

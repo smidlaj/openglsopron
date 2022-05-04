@@ -77,6 +77,8 @@ if not glfw.init():
 window = glfw.create_window(1280, 720, "OpenGL window", 
 	None, None)
 
+glfw.set_window_pos(window, 0, 0)
+
 if not window:
 	glfw.terminate()
 	raise Exception("glfw window init hiba")
@@ -483,6 +485,9 @@ while not glfw.window_should_close(window) and not exitProgram:
 	if glfw.get_key(window, glfw.KEY_W) == glfw.PRESS:
 		direction = 0.5
 	camera.move(direction)
+
+	cellX, cellZ = camera.getCellPosition(20)
+	print(world.getCellType(cellZ, cellX))
 
 	glClearDepth(1.0)
 	glClearColor(0, 0.1, 0.1, 1)

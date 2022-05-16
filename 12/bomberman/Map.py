@@ -13,6 +13,40 @@ class ObjectType(Enum):
 	BOX = 2,
 	BOMB = 3
 
+def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
+	# eszaki sark:
+	tx = 1.0 - horizIndex / horizSlices
+	if vertIndex == 0:
+		return [0.0, radius, 0.0, 0.0, 1.0, 0.0, tx, 0.0]
+	# deli sark:
+	if vertIndex == vertSlices - 1:
+		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0, tx, 1.0]
+	alpha = math.radians(180 * (vertIndex / vertSlices))
+	beta = math.radians(360 * (horizIndex / horizSlices))
+	x = radius * math.sin(alpha) * math.cos(beta)
+	y = radius * math.cos(alpha)
+	z = radius * math.sin(alpha) * math.sin(beta)
+	l = math.sqrt(x**2 + y**2 + z**2)
+	nx = x / l
+	ny = y / l
+	nz = z / l
+	ty = vertIndex / vertSlices
+	return [x, y, z, nx, ny, nz, tx, ty]
+
+def createSphere(radius, vertSlices, horizSlices):
+	vertList = []
+	for i in range(vertSlices):
+		for j in range(horizSlices):
+			vert1 = getSpherePoint(radius, i, j, vertSlices, horizSlices)
+			vert2 = getSpherePoint(radius, i + 1, j, vertSlices, horizSlices)
+			vert3 = getSpherePoint(radius, i + 1, j + 1, vertSlices, horizSlices)
+			vert4 = getSpherePoint(radius, i, j + 1, vertSlices, horizSlices)
+			vertList.extend(vert1)
+			vertList.extend(vert2)
+			vertList.extend(vert3)
+			vertList.extend(vert4)
+	return vertList
+
 
 class Map:
 	def __init__(self, width, height, boxes):
@@ -27,6 +61,21 @@ class Map:
 		for i in range(0, self.width):
 			self.table[0][i] = ObjectType.WALL
 			self.table[self.height - 1][i] = ObjectType.WALL
+		
+		for i in range(0, height):
+			for j in range(0, width):
+				self.table[ (i+1)*2 ][ (j+1)*2 ] = ObjectType.WALL
+
+		self.table[1][1] = ObjectType.BOMB
+
+		# gomb
+		vertices = createSphere(5, 50, 50)
+		self.sphereVertCount = int(len(vertices) / 6)
+		vertices = numpy.array(vertices, dtype=numpy.float32)
+		self.sphereBuffer = glGenBuffers(1)
+		glBindBuffer(GL_ARRAY_BUFFER, self.sphereBuffer)
+		glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+		glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 		vertices = [0.0, 1.0, 1.0,  0, 1, 0, 0, 0,
 	                 1.0, 1.0, 1.0,  0, 1, 0, 0, 1,
@@ -59,11 +108,14 @@ class Map:
 				    0.0,   1.0,  0.0, 0, 0, -1, 1, 0]
 
 
+		# kocka
 		vertices = numpy.array(vertices, dtype=numpy.float32)
 		self.buffer = glGenBuffers(1)
 		glBindBuffer(GL_ARRAY_BUFFER, self.buffer)
 		glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
 		glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+
 
 		with open("cube.vert") as f:
 			vertex_shader = f.read()
@@ -77,6 +129,7 @@ class Map:
     		OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
 		)
 		self.wallTexture = Texture("metal.png")
+		self.bombTexture = Texture("bomb.png")
 
 		self.cellSize = 20
 
@@ -134,6 +187,7 @@ class Map:
 		glVertexAttribPointer(texture_loc, 2, GL_FLOAT, False, 4 * 8, ctypes.c_void_p(24))
 
 		Texture.enableTexturing()
+		# fal renderelese
 		self.wallTexture.activate()
 		for row in range(0, self.height):
 			for col in range(0, self.width):
@@ -146,6 +200,31 @@ class Map:
 					glDrawArrays(GL_QUADS, 0, 24)
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+		# bomba renderelese
+		glBindBuffer(GL_ARRAY_BUFFER, self.sphereBuffer)
+
+		position_loc = glGetAttribLocation(self.shader, 'in_position')
+		glEnableVertexAttribArray(position_loc)
+		glVertexAttribPointer(position_loc, 3, GL_FLOAT, False, 4 * 8, ctypes.c_void_p(0))
+
+		normal_loc = glGetAttribLocation(self.shader, 'in_normal')
+		glEnableVertexAttribArray(normal_loc)
+		glVertexAttribPointer(normal_loc, 3, GL_FLOAT, False, 4 * 8, ctypes.c_void_p(12))
+
+		texture_loc = glGetAttribLocation(self.shader, 'in_texture')
+		glEnableVertexAttribArray(texture_loc)
+		glVertexAttribPointer(texture_loc, 2, GL_FLOAT, False, 4 * 8, ctypes.c_void_p(24))
+
+		self.bombTexture.activate()
+		for row in range(0, self.height):
+			for col in range(0, self.width):
+				if self.table[row][col] == ObjectType.BOMB:
+					transMat = pyrr.matrix44.create_from_translation(
+						pyrr.Vector3([col*self.cellSize + self.cellSize / 2, -5, row*self.cellSize + self.cellSize / 2 ]))
+					glUniformMatrix4fv(world_loc, 1, GL_FALSE, transMat)
+					glDrawArrays(GL_QUADS, 0, self.sphereVertCount)
+
 		glUseProgram(0)
 
 
@@ -154,3 +233,7 @@ class Map:
 			return ObjectType.NOTHING
 		return self.table[row][col]
 
+	def isSomething(self, row, col):
+		if self.table[row][col] == ObjectType.NOTHING:
+			return False
+		return True

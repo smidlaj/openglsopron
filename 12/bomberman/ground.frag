@@ -1,7 +1,10 @@
 #version 330 core
+in vec2 kiscica;
 out vec4 FragColor;
+
+uniform sampler2D textureSampler;
 
 void main()
 {    
-    FragColor = vec4(0, 1, 0, 1);
+    FragColor = texture(textureSampler, kiscica);
 }

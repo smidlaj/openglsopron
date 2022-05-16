@@ -27,14 +27,18 @@ class Camera:
 			Az kamera aktualis iranyanak megfelelo iranyba mozditja el a kamerat.
 			@param dist: Azt adja meg, hogy az iranyvektor hanyszorosaval mozduljunk el.
 		"""
+
+		self.prevX = self.x
+		self.prevY = self.y
+		self.prevZ = self.z
 		self.x += self.dirX * dist
 		#self.y += self.dirY * dist
 		self.z += self.dirZ * dist
 
-		cellX = int(self.x / 20)
-		cellZ = int(self.z / 20)
-		print(cellX)
-		print(cellZ)
+	def undo(self):
+		self.x = self.prevX
+		self.y = self.prevY
+		self.z = self.prevZ
 
 	def getCellPosition(self, cellSize):
 		return int(self.x / cellSize), int(self.z / cellSize)

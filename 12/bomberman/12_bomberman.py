@@ -13,40 +13,7 @@ from Texture import Texture
 from Camera import Camera
 from Ground import Ground
 from Map import Map
-
-def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
-	# eszaki sark:
-	tx = 1.0 - horizIndex / horizSlices
-	if vertIndex == 0:
-		return [0.0, radius, 0.0, 0.0, 1.0, 0.0, tx, 0.0]
-	# deli sark:
-	if vertIndex == vertSlices - 1:
-		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0, tx, 1.0]
-	alpha = math.radians(180 * (vertIndex / vertSlices))
-	beta = math.radians(360 * (horizIndex / horizSlices))
-	x = radius * math.sin(alpha) * math.cos(beta)
-	y = radius * math.cos(alpha)
-	z = radius * math.sin(alpha) * math.sin(beta)
-	l = math.sqrt(x**2 + y**2 + z**2)
-	nx = x / l
-	ny = y / l
-	nz = z / l
-	ty = vertIndex / vertSlices
-	return [x, y, z, nx, ny, nz, tx, ty]
-
-def createSphere(radius, vertSlices, horizSlices):
-	vertList = []
-	for i in range(vertSlices):
-		for j in range(horizSlices):
-			vert1 = getSpherePoint(radius, i, j, vertSlices, horizSlices)
-			vert2 = getSpherePoint(radius, i + 1, j, vertSlices, horizSlices)
-			vert3 = getSpherePoint(radius, i + 1, j + 1, vertSlices, horizSlices)
-			vert4 = getSpherePoint(radius, i, j + 1, vertSlices, horizSlices)
-			vertList.extend(vert1)
-			vertList.extend(vert2)
-			vertList.extend(vert3)
-			vertList.extend(vert4)
-	return vertList
+from Map import ObjectType
 
 xPosPrev = 0
 yPosPrev = 0
@@ -94,7 +61,7 @@ glViewport(0, 0, 1280, 720)
 #glLoadIdentity()
 #gluPerspective(45, 1280.0 / 720.0, 0.1, 1000.0)
 
-camera = Camera(100, 0, 100)
+camera = Camera(110, 0, 110)
 
 with open("vertex_shader_texture.vert") as f:
 	vertex_shader = f.read()
@@ -473,21 +440,36 @@ world.setLightPos(lightX, lightY, lightZ)
 viewMat = pyrr.matrix44.create_look_at([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0])
 angle = 0.0
 
+elapsedTime = 0
+
 while not glfw.window_should_close(window) and not exitProgram:
+	startTime = glfw.get_time()
 	glfw.poll_events()
 
 	if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
 		exitProgram = True
 
-	direction = 0
+	directionTry = 0
+	directionReal = 0
 	if glfw.get_key(window, glfw.KEY_S) == glfw.PRESS:
-		direction = -0.5
+		directionTry = -30*elapsedTime
+		directionReal = -15*elapsedTime
 	if glfw.get_key(window, glfw.KEY_W) == glfw.PRESS:
-		direction = 0.5
-	camera.move(direction)
+		directionTry = 30*elapsedTime
+		directionReal = 15*elapsedTime
+	camera.move(directionTry)
 
 	cellX, cellZ = camera.getCellPosition(20)
+	collision = False
+	if world.isSomething(cellZ, cellX):
+		collision = True
+	camera.undo()
+	if not collision:
+		camera.move(directionReal)
+
+
 	print(world.getCellType(cellZ, cellX))
+
 
 	glClearDepth(1.0)
 	glClearColor(0, 0.1, 0.1, 1)
@@ -540,8 +522,12 @@ while not glfw.window_should_close(window) and not exitProgram:
 	skybox_loc = glGetUniformLocation(shader, "skybox")
 	glUniform1i(skybox_loc, 0)
 	skyBox.activateCubeMap(shader, 1)
-	renderModel(cube, vertCount, shapeType)
+	#renderModel(cube, vertCount, shapeType)
 
 	glfw.swap_buffers(window)
 	
+	endTime = glfw.get_time()
+	elapsedTime = endTime - startTime
+	print(int(1.0 / elapsedTime))
+
 glfw.terminate()

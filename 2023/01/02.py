@@ -7,7 +7,7 @@ import numpy as np
 if not glfw.init():
 	raise Exception("glfw init hiba")
 	
-window = glfw.create_window(1280, 720, "OpenGL window", None, None)
+window = glfw.create_window(400, 400, "OpenGL window", None, None)
 
 if not window:
 	glfw.terminate()
@@ -55,10 +55,13 @@ while not glfw.window_should_close(window):
     glClearColor(0, 0, 0, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+    #glPointSize(4)
+
     glEnableVertexAttribArray(0)
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, None)
 
+    #glDrawArrays(GL_POINTS, 0, 3)
     glDrawArrays(GL_TRIANGLES, 0, 3)
     glDisableVertexAttribArray(0)
 

@@ -7,7 +7,7 @@ import numpy as np
 if not glfw.init():
 	raise Exception("glfw init hiba")
 	
-window = glfw.create_window(400, 400, "OpenGL window", None, None)
+window = glfw.create_window(1280, 720, "OpenGL window", None, None)
 
 if not window:
 	glfw.terminate()
@@ -18,9 +18,10 @@ glfw.set_window_pos(window, 400, 200)
 glfw.make_context_current(window)
 
 
-triangle = [-0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
-            0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
-            0.0, 0.5, 0.0, 0.0, 0.0, 1.0]
+triangle = [-0.1, -0.1,
+            -0.1, 0.1,
+            0.1, 0.1,
+            0.1, -0.1]
  
 triangle = np.array(triangle, dtype=np.float32)
  
@@ -31,11 +32,11 @@ glBufferData(GL_ARRAY_BUFFER, triangle.nbytes, triangle, GL_STATIC_DRAW)
 glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 
-with open("vertex_shader_3.vert") as f:
+with open("vertex_shader.vert") as f:
 	vertex_shader = f.read()
 	print(vertex_shader)
 
-with open("fragment_shader_3.frag") as f:
+with open("fragment_shader.frag") as f:
 	fragment_shader = f.read()
 	print(fragment_shader)
 
@@ -49,23 +50,36 @@ shader = OpenGL.GL.shaders.compileProgram(
 # ha esetleg a programunk kulonbozo tipusu anyagokat szeretne megjeleniteni.
 glUseProgram(shader)
 
+offsetX = 0
+offsetY = 0
+
+xLoc = glGetUniformLocation(shader, "x")
+yLoc = glGetUniformLocation(shader, "y")
 
 while not glfw.window_should_close(window):
     glfw.poll_events()
+
+    if glfw.get_key(window, glfw.KEY_UP) == glfw.PRESS:
+        offsetY += 0.01
+    if glfw.get_key(window, glfw.KEY_DOWN) == glfw.PRESS:
+        offsetY -= 0.01
+    if glfw.get_key(window, glfw.KEY_LEFT) == glfw.PRESS:
+        offsetX -= 0.01
+    if glfw.get_key(window, glfw.KEY_RIGHT) == glfw.PRESS:
+        offsetX += 0.01        
+
+    glUniform1f(xLoc, offsetX)
+    glUniform1f(yLoc, offsetY)
+
     glClearColor(0, 0, 0, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glEnableVertexAttribArray(0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*4, None)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, None)
 
-    glEnableVertexAttribArray(1)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*4, ctypes.c_void_p(12))
-
-    glDrawArrays(GL_TRIANGLES, 0, 3)
+    glDrawArrays(GL_QUADS, 0, 4)
     glDisableVertexAttribArray(0)
-    glDisableVertexAttribArray(1)
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
 
     glfw.swap_buffers(window)
 	

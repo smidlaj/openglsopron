@@ -15,5 +15,7 @@ A szükséges Python modulok:
     pip install PyOpenGL
     
     pip install numpy
+
+    pip install pyrr
 ```
 

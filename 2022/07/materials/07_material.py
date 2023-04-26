@@ -218,7 +218,7 @@ class Material(Enum):
 	WHITE_RUBBER = 23,
 	YELLOW_RUBBER = 24,
 
-materialType = Material.GOLD
+materialType = Material.SILVER
 
 if materialType is Material.EMERALD:
 	glUniform3f(materialAmbientColor_loc, 0.0215, 0.1745, 0.0215)

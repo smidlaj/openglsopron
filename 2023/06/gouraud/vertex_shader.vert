@@ -14,7 +14,7 @@ void main() {
    gl_Position = perspectiveMatrix * world_position;
 
    vec3 normal = normalize( mat3(transpose(inverse(modelView))) * v_normal);
-   vec3 lightDir = normalize( vec4(lightPos, 1.0) - world_position  ).xyz;
+   vec3 lightDir = normalize( lightPos - world_position.xyz  );
 
    float diffColor = max(dot(normal, lightDir), 0.0) * 0.9;
    color = vec3(0.4, 0, 0) + diffColor;

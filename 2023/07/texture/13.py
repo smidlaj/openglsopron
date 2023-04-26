@@ -5,15 +5,16 @@ import OpenGL.GL.shaders
 import numpy as np
 import pyrr
 import math
-from UtahTeapot import *
+from PIL import Image
 
 def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
-	# eszaki sark:
+	tx = 1.0 - horizIndex / horizSlices
+    # eszaki sark:
 	if vertIndex == 0:
-		return [0.0, radius, 0.0, 0.0, 1.0, 0.0]
+		return [0.0, radius, 0.0, 0.0, 1.0, 0.0, tx, 0.0]
 	# deli sark:
 	if vertIndex == vertSlices - 1:
-		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0]
+		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0, tx, 1.0]
 	alpha = math.radians(180 * (vertIndex / vertSlices))
 	beta = math.radians(360 * (horizIndex / horizSlices))
 	x = radius * math.sin(alpha) * math.cos(beta)
@@ -23,7 +24,8 @@ def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
 	nx = x / l
 	ny = y / l
 	nz = z / l
-	return [x, y, z, nx, ny, nz]
+	ty = vertIndex / vertSlices
+	return [x, y, z, nx, ny, nz, tx, ty]
 
 def createSphere(radius, vertSlices, horizSlices):
 	vertList = []
@@ -54,37 +56,37 @@ glfw.set_window_pos(window, 400, 200)
 glfw.make_context_current(window)
 
 
-cube = [     -10, -10, 10.0, 0.0, 0.0, 1.0,
-             -10,  10, 10.0, 0.0, 0.0, 1.0,
-              10,  10, 10.0, 0.0, 0.0, 1.0,
-              10, -10, 10.0, 0.0, 0.0, 1.0,
+cube = [     -10, -10, 10.0, 0.0, 0.0, 1.0, 0, 0,
+             -10,  10, 10.0, 0.0, 0.0, 1.0, 0, 1,
+              10,  10, 10.0, 0.0, 0.0, 1.0, 1, 1,
+              10, -10, 10.0, 0.0, 0.0, 1.0, 1, 0,
               
-             -10, -10, -10.0, 0.0, 0.0, -1.0,
-             -10,  10, -10.0, 0.0, 0.0, -1.0,
-              10,  10, -10.0, 0.0, 0.0, -1.0,
-              10, -10, -10.0, 0.0, 0.0, -1.0,
+             -10, -10, -10.0, 0.0, 0.0, -1.0, 0, 0,
+             -10,  10, -10.0, 0.0, 0.0, -1.0, 0, 1,
+              10,  10, -10.0, 0.0, 0.0, -1.0, 1, 1,
+              10, -10, -10.0, 0.0, 0.0, -1.0, 1, 0,
               
-              -10,  10,  10, -1.0, 0.0, 0.0, 
-              -10, -10,  10, -1.0, 0.0, 0.0,
-              -10, -10, -10, -1.0, 0.0, 0.0,
-              -10,  10, -10, -1.0, 0.0, 0.0,
+              -10,  10,  10, -1.0, 0.0, 0.0, 0, 0,
+              -10, -10,  10, -1.0, 0.0, 0.0, 0, 1,
+              -10, -10, -10, -1.0, 0.0, 0.0, 1, 1,
+              -10,  10, -10, -1.0, 0.0, 0.0, 1, 0,
               
-              10,  10,  10, 1.0, 0.0, 0.0, 
-              10, -10,  10, 1.0, 0.0, 0.0,
-              10, -10, -10, 1.0, 0.0, 0.0,
-              10,  10, -10, 1.0, 0.0, 0.0,
+              10,  10,  10, 1.0, 0.0, 0.0, 0, 0, 
+              10, -10,  10, 1.0, 0.0, 0.0, 0, 1,
+              10, -10, -10, 1.0, 0.0, 0.0, 1, 1,
+              10,  10, -10, 1.0, 0.0, 0.0, 1, 0,
               
-              -10, 10,  10, 0.0, 1.0, 0.0,
-               10, 10,  10, 0.0, 1.0, 0.0,
-               10, 10, -10, 0.0, 1.0, 0.0,
-              -10, 10, -10, 0.0, 1.0, 0.0,
+              -10, 10,  10, 0.0, 1.0, 0.0, 0, 0,
+               10, 10,  10, 0.0, 1.0, 0.0, 0, 1,
+               10, 10, -10, 0.0, 1.0, 0.0, 1, 1,
+              -10, 10, -10, 0.0, 1.0, 0.0, 1, 0,
               
-              -10, -10,  10, 0.0, -1.0, 0.0,
-               10, -10,  10, 0.0, -1.0, 0.0,
-               10, -10, -10, 0.0, -1.0, 0.0,
-              -10, -10, -10, 0.0, -1.0, 0.0]
+              -10, -10,  10, 0.0, -1.0, 0.0, 0, 0,
+               10, -10,  10, 0.0, -1.0, 0.0, 0, 1,
+               10, -10, -10, 0.0, -1.0, 0.0, 1, 1,
+              -10, -10, -10, 0.0, -1.0, 0.0, 1, 0]
 
-selectObject = 2
+selectObject = 0
 if selectObject == 0:
     model = cube
     vertCount = 6*4
@@ -94,12 +96,7 @@ if selectObject == 1:
     model = createSphere(10, 100, 100)
     vertCount = int(len(model) / 6)
     shapeType = GL_QUADS
-    zTranslate = -50
-if selectObject == 2:
-	model = utahTeapotVertices
-	vertCount = utahTeapotVertCount
-	shapeType = GL_TRIANGLES
-	zTranslate = -5    
+    zTranslate = -50  
 
 model = np.array(model, dtype=np.float32)
 
@@ -108,6 +105,24 @@ glBindBuffer(GL_ARRAY_BUFFER, VBO)
 glBufferData(GL_ARRAY_BUFFER, model.nbytes, model, GL_STATIC_DRAW)
 glBindBuffer(GL_ARRAY_BUFFER, 0)
 
+
+texture = glGenTextures(1)
+glBindTexture(GL_TEXTURE_2D, texture)
+
+# Set the texture wrapping parameters
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+# Set texture filtering parameters
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+# load image
+image = Image.open("wood.jpg")
+#image = image.transpose(Image.FLIP_TOP_BOTTOM)
+img_data = image.convert("RGBA").tobytes()
+# img_data = np.array(image.getdata(), np.uint8) # second way of getting the raw image data
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+glBindTexture(GL_TEXTURE_2D, 0)
 
 with open("vertex_shader.vert") as f:
 	vertex_shader = f.read()
@@ -181,14 +196,20 @@ while not glfw.window_should_close(window):
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glEnableVertexAttribArray(0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, None)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 32, None)
 
     glEnableVertexAttribArray(1)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(12))
+
+    glEnableVertexAttribArray(2)
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(24))
+
+    glBindTexture(GL_TEXTURE_2D, texture)
 
     glDrawArrays(shapeType, 0, vertCount)
     glDisableVertexAttribArray(0)
     glDisableVertexAttribArray(1)
+    glDisableVertexAttribArray(2)
 
     glfw.swap_buffers(window)	
     

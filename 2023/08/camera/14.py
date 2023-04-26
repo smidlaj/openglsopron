@@ -5,15 +5,38 @@ import OpenGL.GL.shaders
 import numpy as np
 import pyrr
 import math
-from UtahTeapot import *
+from PIL import Image
+from Camera import *
+
+xPosPrev = 0
+yPosPrev = 0
+firstCursorCallback = True
+sensitivity = 0.05
+
+def cursorCallback(window, xPos, yPos):
+	global firstCursorCallback
+	global sensitivity
+	global xPosPrev, yPosPrev
+	if firstCursorCallback:
+		firstCursorCallback = False	
+	else:
+		xDiff = xPos - xPosPrev
+		yDiff = yPosPrev - yPos
+		camera.rotateUpDown(yDiff * sensitivity)
+		camera.rotateRightLeft(xDiff * sensitivity)
+
+	xPosPrev = xPos
+	yPosPrev = yPos
+
 
 def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
-	# eszaki sark:
+	tx = 1.0 - horizIndex / horizSlices
+    # eszaki sark:
 	if vertIndex == 0:
-		return [0.0, radius, 0.0, 0.0, 1.0, 0.0]
+		return [0.0, radius, 0.0, 0.0, 1.0, 0.0, tx, 0.0]
 	# deli sark:
 	if vertIndex == vertSlices - 1:
-		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0]
+		return [0.0, -radius, 0.0, 0.0, -1.0, 0.0, tx, 1.0]
 	alpha = math.radians(180 * (vertIndex / vertSlices))
 	beta = math.radians(360 * (horizIndex / horizSlices))
 	x = radius * math.sin(alpha) * math.cos(beta)
@@ -23,7 +46,8 @@ def getSpherePoint(radius, vertIndex, horizIndex, vertSlices, horizSlices):
 	nx = x / l
 	ny = y / l
 	nz = z / l
-	return [x, y, z, nx, ny, nz]
+	ty = vertIndex / vertSlices
+	return [x, y, z, nx, ny, nz, tx, ty]
 
 def createSphere(radius, vertSlices, horizSlices):
 	vertList = []
@@ -52,39 +76,41 @@ if not window:
 glfw.set_window_pos(window, 400, 200)
 
 glfw.make_context_current(window)
+glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+glfw.set_cursor_pos_callback(window, cursorCallback)
 
 
-cube = [     -10, -10, 10.0, 0.0, 0.0, 1.0,
-             -10,  10, 10.0, 0.0, 0.0, 1.0,
-              10,  10, 10.0, 0.0, 0.0, 1.0,
-              10, -10, 10.0, 0.0, 0.0, 1.0,
+cube = [     -10, -10, 10.0, 0.0, 0.0, 1.0, 0, 0,
+             -10,  10, 10.0, 0.0, 0.0, 1.0, 0, 1,
+              10,  10, 10.0, 0.0, 0.0, 1.0, 1, 1,
+              10, -10, 10.0, 0.0, 0.0, 1.0, 1, 0,
               
-             -10, -10, -10.0, 0.0, 0.0, -1.0,
-             -10,  10, -10.0, 0.0, 0.0, -1.0,
-              10,  10, -10.0, 0.0, 0.0, -1.0,
-              10, -10, -10.0, 0.0, 0.0, -1.0,
+             -10, -10, -10.0, 0.0, 0.0, -1.0, 0, 0,
+             -10,  10, -10.0, 0.0, 0.0, -1.0, 0, 1,
+              10,  10, -10.0, 0.0, 0.0, -1.0, 1, 1,
+              10, -10, -10.0, 0.0, 0.0, -1.0, 1, 0,
               
-              -10,  10,  10, -1.0, 0.0, 0.0, 
-              -10, -10,  10, -1.0, 0.0, 0.0,
-              -10, -10, -10, -1.0, 0.0, 0.0,
-              -10,  10, -10, -1.0, 0.0, 0.0,
+              -10,  10,  10, -1.0, 0.0, 0.0, 0, 0,
+              -10, -10,  10, -1.0, 0.0, 0.0, 0, 1,
+              -10, -10, -10, -1.0, 0.0, 0.0, 1, 1,
+              -10,  10, -10, -1.0, 0.0, 0.0, 1, 0,
               
-              10,  10,  10, 1.0, 0.0, 0.0, 
-              10, -10,  10, 1.0, 0.0, 0.0,
-              10, -10, -10, 1.0, 0.0, 0.0,
-              10,  10, -10, 1.0, 0.0, 0.0,
+              10,  10,  10, 1.0, 0.0, 0.0, 0, 0, 
+              10, -10,  10, 1.0, 0.0, 0.0, 0, 1,
+              10, -10, -10, 1.0, 0.0, 0.0, 1, 1,
+              10,  10, -10, 1.0, 0.0, 0.0, 1, 0,
               
-              -10, 10,  10, 0.0, 1.0, 0.0,
-               10, 10,  10, 0.0, 1.0, 0.0,
-               10, 10, -10, 0.0, 1.0, 0.0,
-              -10, 10, -10, 0.0, 1.0, 0.0,
+              -10, 10,  10, 0.0, 1.0, 0.0, 0, 0,
+               10, 10,  10, 0.0, 1.0, 0.0, 0, 1,
+               10, 10, -10, 0.0, 1.0, 0.0, 1, 1,
+              -10, 10, -10, 0.0, 1.0, 0.0, 1, 0,
               
-              -10, -10,  10, 0.0, -1.0, 0.0,
-               10, -10,  10, 0.0, -1.0, 0.0,
-               10, -10, -10, 0.0, -1.0, 0.0,
-              -10, -10, -10, 0.0, -1.0, 0.0]
+              -10, -10,  10, 0.0, -1.0, 0.0, 0, 0,
+               10, -10,  10, 0.0, -1.0, 0.0, 0, 1,
+               10, -10, -10, 0.0, -1.0, 0.0, 1, 1,
+              -10, -10, -10, 0.0, -1.0, 0.0, 1, 0]
 
-selectObject = 2
+selectObject = 1
 if selectObject == 0:
     model = cube
     vertCount = 6*4
@@ -94,12 +120,7 @@ if selectObject == 1:
     model = createSphere(10, 100, 100)
     vertCount = int(len(model) / 6)
     shapeType = GL_QUADS
-    zTranslate = -50
-if selectObject == 2:
-	model = utahTeapotVertices
-	vertCount = utahTeapotVertCount
-	shapeType = GL_TRIANGLES
-	zTranslate = -5    
+    zTranslate = -50  
 
 model = np.array(model, dtype=np.float32)
 
@@ -107,6 +128,24 @@ VBO = glGenBuffers(1)
 glBindBuffer(GL_ARRAY_BUFFER, VBO)
 glBufferData(GL_ARRAY_BUFFER, model.nbytes, model, GL_STATIC_DRAW)
 glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+
+texture = glGenTextures(1)
+glBindTexture(GL_TEXTURE_2D, texture)
+
+# Set the texture wrapping parameters
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+# Set texture filtering parameters
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+# load image
+image = Image.open("wood.jpg")
+#image = image.transpose(Image.FLIP_TOP_BOTTOM)
+img_data = image.convert("RGBA").tobytes()
+# img_data = np.array(image.getdata(), np.uint8) # second way of getting the raw image data
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
 
 
 with open("vertex_shader.vert") as f:
@@ -132,6 +171,7 @@ offsetY = 0
 
 transformMatrix = glGetUniformLocation(shader, "modelView")
 perspectiveMatrix = glGetUniformLocation(shader, "perspectiveMatrix")
+cameraMatrix = glGetUniformLocation(shader, "camera")
 
 perspMatrix = pyrr.matrix44.create_perspective_projection_matrix(
     45.0, 1280.0 / 720.0, 0.1, 1000.0)
@@ -143,52 +183,61 @@ lightX = 40.0
 lightY = 20.0
 lightZ = 20.0
 
-eyeX = 0.0
-eyeY = 0.0
-eyeZ = 0.0
-
 lightPos_loc = glGetUniformLocation(shader, 'lightPos');
 viewPos_loc = glGetUniformLocation(shader, 'viewPos');
 
 glEnable(GL_DEPTH_TEST)
 
-while not glfw.window_should_close(window):
+camera = Camera(10, 0, 5)
+
+exitProgram = False
+
+while not glfw.window_should_close(window) and not exitProgram:
     startTime = glfw.get_time()
     glfw.poll_events()
 
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+        exitProgram = True
+
     if glfw.get_key(window, glfw.KEY_UP) == glfw.PRESS:
-        offsetY += 0.01
+        camera.move(elapsedTime * 15)
     if glfw.get_key(window, glfw.KEY_DOWN) == glfw.PRESS:
-        offsetY -= 0.01
+        camera.move(-elapsedTime * 15)
     if glfw.get_key(window, glfw.KEY_LEFT) == glfw.PRESS:
-        offsetX -= 0.01
+        camera.rotateRightLeft(-elapsedTime * 30)
     if glfw.get_key(window, glfw.KEY_RIGHT) == glfw.PRESS:
-        offsetX += 0.01        
+        camera.rotateRightLeft(elapsedTime * 30)     
 
     transMat = pyrr.matrix44.create_from_translation(  pyrr.Vector3([0.0, 0.0, zTranslate]))
     rotMat = pyrr.matrix44.create_from_axis_rotation(pyrr.Vector3([1., -1., 1.0]), math.radians(angle))
     matrix = pyrr.matrix44.multiply(rotMat, transMat)
-    angle += 45.0 * elapsedTime
+    #angle += 45.0 * elapsedTime
 
     glUniformMatrix4fv(transformMatrix, 1, GL_FALSE, matrix )
     glUniformMatrix4fv(perspectiveMatrix, 1, GL_FALSE, perspMatrix )
 
     glUniform3f(lightPos_loc, lightX, lightY, lightZ)
-    glUniform3f(viewPos_loc, eyeX, eyeY, eyeZ)
+    glUniform3f(viewPos_loc, camera.x, camera.y, camera.z)
 
     glClearColor(0, 0, 0, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glEnableVertexAttribArray(0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, None)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 32, None)
 
     glEnableVertexAttribArray(1)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(12))
+
+    glEnableVertexAttribArray(2)
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(24))
+
+    camera.apply(cameraMatrix)
 
     glDrawArrays(shapeType, 0, vertCount)
     glDisableVertexAttribArray(0)
     glDisableVertexAttribArray(1)
+    glDisableVertexAttribArray(2)
 
     glfw.swap_buffers(window)	
     
